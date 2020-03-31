@@ -149,21 +149,35 @@ class Process:
         self.color = color	
         self.hists = []
         self.rdfs = []
+	self.histTotalSystUp = ROOT.TH1F(args.name, args.name, args.nbins, args.xmin, args.xmax)
 
     def add(self, *args):
         for arg in args:
             self.rdfs.append(arg.rdf)
-#args are the TH1F parameters. 
-    def Histo1D(self, args, varexp, weight):
+
+
+    def Histo1D(self, args, varexp , jesUp, jesDown, jerUp, jerDown, sysUnc, weight):
         for i, rdf in enumerate(self.rdfs):
 	    var = varexp.split("[")[0]
             if i == 0:
 		hist = rdf.Define("var",varexp).Histo1D(args, "var", weight)
                 #hist = rdf.Histo1D(args, varexp, weight)
+		if sysUnc : 
+			histjesUp = rdf.Histo1D(args, jesUp , weight)
+			histjerUp = rdf.Histo1D(args, jerUp, weight)
+			for i in hist.GetNbinsX() : 
+				alpha = hist.GetBinContent(i) 
+				beta = histjesUp.GetBinContent(i) 
+				gamma = histjerUp.GetBinContent(i) 
+				epsilon1 = beta - alpha 
+				epsilon2 = gamma - alpha 
+				systTotalUp = math.sqrt(epsilon1*epsilon1 + epsilon2*epsilon2)	
+				histTotalSystUp.SetBinContent(i , alpha + systTotalUp)
             else:
                 #tmp_hist = rdf.Histo1D(args, varexp, weight)
 		tmp_hist = rdf.Define("var" , varexp).Histo1D(args, "var", weight)
                 hist.Add(tmp_hist.GetValue())
+		
 
         hist.GetXaxis().SetTitle(args[1])
         hist.SetLineColor(ROOT.TColor.GetColor(colorscale(self.color, 0.8)))
@@ -248,5 +262,8 @@ for suffix, weight in categories.items():
             else:
                 isData = False
 	    print "suffix is :", suffix
-            variable.Add(process.Histo1D(variable.args, variable.varexp, suffix), process.title, isSignal=isSignal, isData=isData)
+	    #Variable.Add should take the name of the uncertainties variables. 
+	    #histo1D should return 3 histograms. 
+	    variable.Add(process.Histo1D(variable.args, variable.varexp,variable.jesUp, variable.jerUp, variable.jesDown, variable.jerDown,variable.sysUnc, suffix), process.title, isSignal=isSignal, isData=isData)
+            #variable.Add(process.Histo1D(variable.args, variable.varexp, suffix), process.title, isSignal=isSignal, isData=isData)
         variable.Draw(suffix, "hist")
