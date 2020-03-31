@@ -157,8 +157,9 @@ class Process:
 
 
     def Histo1D(self, args, varexp , jesUp, jesDown, jerUp, jerDown, sysUnc, weight):
-	self.histTotalSystUp = ROOT.TH1F(args.name, args.name, args.nbins, args.xmin, args.xmax)
-	#self.histTotalSystUp = ROOT.TH1F(name, name, nbins, xmin, xmax)
+	#self.histTotalSystUp = ROOT.TH1F(args[name], args.name, args.nbins, args.xmin, args.xmax)
+	self.histTotalSystUp_0 = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
+	self.histTotalSystUp = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
         for i, rdf in enumerate(self.rdfs):
 	    var = varexp.split("[")[0]
             if i == 0:
@@ -174,7 +175,8 @@ class Process:
 				epsilon1 = beta - alpha 
 				epsilon2 = gamma - alpha 
 				systTotalUp = math.sqrt(epsilon1*epsilon1 + epsilon2*epsilon2)	
-				histTotalSystUp.SetBinContent(i , alpha + systTotalUp)
+				histTotalSystUp_0.SetBinContent(i , alpha + systTotalUp)
+	    		histTotalSystUp = histTotalSysUp_0.Clone(histTotalSystUp_0)
             else:
                 #tmp_hist = rdf.Histo1D(args, varexp, weight)
 		tmp_hist = rdf.Define("var" , varexp).Histo1D(args, "var", weight)
