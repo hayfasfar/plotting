@@ -56,6 +56,7 @@ class Variable:
 	self.jerDown = jerDown 
 	self.jesUp = jesUp 
 	self.jesDown = jesDown
+	self.sysUnc = True
     def Add(self, hist, title, isSignal=False, isData=False):
         hist.SetDirectory(0)
         if isSignal:
@@ -149,7 +150,6 @@ class Process:
         self.color = color	
         self.hists = []
         self.rdfs = []
-	self.histTotalSystUp = ROOT.TH1F(args.name, args.name, args.nbins, args.xmin, args.xmax)
 
     def add(self, *args):
         for arg in args:
@@ -157,6 +157,8 @@ class Process:
 
 
     def Histo1D(self, args, varexp , jesUp, jesDown, jerUp, jerDown, sysUnc, weight):
+	self.histTotalSystUp = ROOT.TH1F(args.name, args.name, args.nbins, args.xmin, args.xmax)
+	#self.histTotalSystUp = ROOT.TH1F(name, name, nbins, xmin, xmax)
         for i, rdf in enumerate(self.rdfs):
 	    var = varexp.split("[")[0]
             if i == 0:
@@ -177,6 +179,7 @@ class Process:
                 #tmp_hist = rdf.Histo1D(args, varexp, weight)
 		tmp_hist = rdf.Define("var" , varexp).Histo1D(args, "var", weight)
                 hist.Add(tmp_hist.GetValue())
+		
 		
 
         hist.GetXaxis().SetTitle(args[1])
