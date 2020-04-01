@@ -157,8 +157,7 @@ class Process:
 
 
     def Histo1D(self, args, varexp , jesUp, jesDown, jerUp, jerDown, sysUnc, weight):
-	#self.histTotalSystUp = ROOT.TH1F(args[name], args.name, args.nbins, args.xmin, args.xmax)
-	self.histTotalSystUp_0 = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
+	#self.histTotalSystUp_0 = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
 	self.histTotalSystUp = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
         for i, rdf in enumerate(self.rdfs):
 	    var = varexp.split("[")[0]
@@ -168,22 +167,30 @@ class Process:
 		if sysUnc : 
 			histjesUp = rdf.Histo1D(args, jesUp , weight)
 			histjerUp = rdf.Histo1D(args, jerUp, weight)
-			for i in hist.GetNbinsX() : 
-				alpha = hist.GetBinContent(i) 
-				beta = histjesUp.GetBinContent(i) 
-				gamma = histjerUp.GetBinContent(i) 
-				epsilon1 = beta - alpha 
-				epsilon2 = gamma - alpha 
-				systTotalUp = math.sqrt(epsilon1*epsilon1 + epsilon2*epsilon2)	
-				histTotalSystUp_0.SetBinContent(i , alpha + systTotalUp)
-	    		histTotalSystUp = histTotalSysUp_0.Clone(histTotalSystUp_0)
+			histjesDown = rdf.Histo1D(args, jesDown , weight)
+			histjerDown = rdf.Histo1D(args, jerDown , weight)
             else:
                 #tmp_hist = rdf.Histo1D(args, varexp, weight)
 		tmp_hist = rdf.Define("var" , varexp).Histo1D(args, "var", weight)
                 hist.Add(tmp_hist.GetValue())
-		
-		
-
+		if sysUnc: 
+			tmp_histjesUp = rdf.Histo1D(args, jesUp, weight)
+			tmp_histjerUp = rdf.Histo1D(args, jerUp, weight)
+			tmp_histjesDown = rdf.Histo1D(args, jesDown , weight)
+			tmp_histjerDown = rdf.Histo1D(args, jerDown , weight)
+	    		histjesUp.Add(tmp_hist.GetValue())
+	    		histjerUp.Add(tmp_hist.GetValue())
+			histjesDown.Add(tmp_hist.GetValue())
+			histjerDown.Add(tmp_hist.GetValue())
+			
+	for i in hist.GetNbinsX() : 
+		alpha = hist.GetBinContent(i) 
+		beta = histjesUp.GetBinContent(i) 
+		gamma = histjerUp.GetBinContent(i) 
+		epsilon1 = beta - alpha 
+		epsilon2 = gamma - alpha 
+		systTotalUp = math.sqrt(epsilon1*epsilon1 + epsilon2*epsilon2)	
+		histTotalSystUp.SetBinContent(i , alpha + systTotalUp)
         hist.GetXaxis().SetTitle(args[1])
         hist.SetLineColor(ROOT.TColor.GetColor(colorscale(self.color, 0.8)))
         hist.SetFillColor(ROOT.TColor.GetColor(colorscale(self.color, 1)))
@@ -264,10 +271,10 @@ for suffix, weight in categories.items():
                 isSignal = False
             if process.name == "data":
                 isData = True
+		variable.sysUnc = False
             else:
                 isData = False
 	    print "suffix is :", suffix
-	    #Variable.Add should take the name of the uncertainties variables. 
 	    #histo1D should return 3 histograms. 
 	    variable.Add(process.Histo1D(variable.args, variable.varexp,variable.jesUp, variable.jerUp, variable.jesDown, variable.jerDown,variable.sysUnc, suffix), process.title, isSignal=isSignal, isData=isData)
             #variable.Add(process.Histo1D(variable.args, variable.varexp, suffix), process.title, isSignal=isSignal, isData=isData)
