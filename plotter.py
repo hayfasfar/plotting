@@ -8,7 +8,7 @@ import json
 import yaml
 
 # path to processed nanoAOD ntuples
-ntuple_path = "/home/hep/hsfar/private/nanoTools/CMSSW_10_2_18/src/nanoAOD_friends_ptJets30/HNL/18Mar20"
+ntuple_path = "/vols/cms/hsfar/nanoAOD_friends/01Apr20/"
 lumi = 35.88
 
 def find_xsec(path, xsecs):
@@ -31,13 +31,13 @@ categories = {}
 #categories["mu1mu2jet_DY_2tights_CR_"] = "(ntightMuons == 2)*(dimuon_mass > 85.)*(nselectedJets>=2)"
 
 #categories["mu1mu2jet_Wjets_CR_"] = "(ntightMuons == 1)*(nlooseMuons == 1)*(dimuon_mass > 110. or ( dimuon_mass < 80. and dimuon_mass > 15.))*(Jet_Muon_MET_Mu_mT >=60.)*(MET_pt < 100.)*(nselectedJets<6)*(Jet_Muon_ht <=180.)*(Jet_Muon_minPhi >1.)*(lepJet_deltaR>=1.)"
-categories["mu1mu2jet_TT_CR_"] ="(ntightMuons == 1)*(nlooseMuons == 1)*(MET_pt > 100)"
+categories["mu1mu2jet_TT_CR_"] ="(ntightMuon == 1)*(nlooseMuons == 1)*(MET_pt > 100)"
 
 #categories["mu1mu2jet_QCD_CR_"] = "(ntightMuons == 1)*(nlooseMuons == 1) * (dimuon_mass < 10.) *(Jet_Muon_minPhi<0.8) * (MET_pt < 50.) " 
 
 # This class is responsible for making the histogram and plotting it for a given variable
 class Variable:
-    def __init__(self, varexp, name, nbins, xmin, xmax, jerUp=None, jerDown=None, jesUp=None, jesDown=None, sysUnc=True, logy=True):
+    def __init__(self, varexp, name, nbins, xmin, xmax, jesUp=None, jesDown=None, jerUp=None, jerDown=None, sysUnc=True, logy=True):
         self.varexp = varexp
         self.args = (varexp, varexp, nbins, xmin, xmax,)
         self.stack = ROOT.THStack(varexp, varexp)
@@ -52,10 +52,10 @@ class Variable:
         self.leg.SetTextSize(self.leg.GetTextSize()*0.8)
         self.xmin = xmin
         self.xmax = xmax
-	self.jerUp = jerUp
-	self.jerDown = jerDown 
 	self.jesUp = jesUp 
 	self.jesDown = jesDown
+	self.jerUp = jerUp
+	self.jerDown = jerDown 
 	self.sysUnc = True
     def Add(self, hist, title, isSignal=False, isData=False):
         hist.SetDirectory(0)
@@ -70,7 +70,6 @@ class Variable:
             self.stack.Add(hist)
             self.sumMC.Add(hist)
             self.leg.AddEntry(hist, title, "f")
-	    #if sysUnc : 
 	    
     def Draw(self, suffix, opt):
         print ("plotting "+self.varexp)
@@ -134,7 +133,7 @@ class Sample:
                 self.sum_weight += yields[path]["weighted"]
         self.rdf = ROOT.RDataFrame("Friends", self.file_list)
         if self.isMC:
-            self.rdf = self.rdf.Define("weightLumi", "genweight*puweight*tightMuons_weight_iso_nominal*tightMuons_weight_id_nominal*%s*1000.0*%s/%s" %(lumi, find_xsec(path, xsecs), self.sum_weight))
+            self.rdf = self.rdf.Define("weightLumi", "genweight*puweight*tightMuon_weight_iso_nominal*tightMuon_weight_id_nominal*%s*1000.0*%s/%s" %(lumi, find_xsec(path, xsecs), self.sum_weight))
         else:
             self.rdf = self.rdf.Define("weightLumi", "1")
         for category, weight in categories.items():
@@ -157,40 +156,48 @@ class Process:
 
 
     def Histo1D(self, args, varexp , jesUp, jesDown, jerUp, jerDown, sysUnc, weight):
-	#self.histTotalSystUp_0 = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
-	self.histTotalSystUp = ROOT.TH1F(args[0], args[1], args[2],args[3],args[4])
         for i, rdf in enumerate(self.rdfs):
 	    var = varexp.split("[")[0]
             if i == 0:
 		hist = rdf.Define("var",varexp).Histo1D(args, "var", weight)
                 #hist = rdf.Histo1D(args, varexp, weight)
-		if sysUnc : 
-			histjesUp = rdf.Histo1D(args, jesUp , weight)
-			histjerUp = rdf.Histo1D(args, jerUp, weight)
+		if sysUnc :
+			histjesUp = rdf.Histo1D(args, jesUp, weight)
 			histjesDown = rdf.Histo1D(args, jesDown , weight)
+			histjerUp = rdf.Histo1D(args, jerUp , weight)
 			histjerDown = rdf.Histo1D(args, jerDown , weight)
+			histTotUp = rdf.Histo1D(args,varexp, weight)
+			histTotDown =rdf.Histo1D(args,varexp, weight)
             else:
                 #tmp_hist = rdf.Histo1D(args, varexp, weight)
 		tmp_hist = rdf.Define("var" , varexp).Histo1D(args, "var", weight)
                 hist.Add(tmp_hist.GetValue())
 		if sysUnc: 
 			tmp_histjesUp = rdf.Histo1D(args, jesUp, weight)
-			tmp_histjerUp = rdf.Histo1D(args, jerUp, weight)
 			tmp_histjesDown = rdf.Histo1D(args, jesDown , weight)
+			tmp_histjerUp = rdf.Histo1D(args, jerUp, weight)
 			tmp_histjerDown = rdf.Histo1D(args, jerDown , weight)
 	    		histjesUp.Add(tmp_hist.GetValue())
-	    		histjerUp.Add(tmp_hist.GetValue())
 			histjesDown.Add(tmp_hist.GetValue())
+	    		histjerUp.Add(tmp_hist.GetValue())
 			histjerDown.Add(tmp_hist.GetValue())
 			
-	for i in hist.GetNbinsX() : 
+	for i in range(1,hist.GetNbinsX()+1) : 
 		alpha = hist.GetBinContent(i) 
 		beta = histjesUp.GetBinContent(i) 
+		betaDown = histjesDown.GetBinContent(i)
 		gamma = histjerUp.GetBinContent(i) 
+		gammaDown = histjerDown.GetBinContent(i)
 		epsilon1 = beta - alpha 
 		epsilon2 = gamma - alpha 
 		systTotalUp = math.sqrt(epsilon1*epsilon1 + epsilon2*epsilon2)	
-		histTotalSystUp.SetBinContent(i , alpha + systTotalUp)
+		histTotUp.SetBinContent(i , alpha + systTotalUp)
+		epsilon1 = betaDown - alpha
+                epsilon2 = gammaDown - alpha
+		systTotalDown = math.sqrt(epsilon1*epsilon1 + epsilon2*epsilon2)
+                histTotDown.SetBinContent(i , alpha + systTotalDown)
+
+		
         hist.GetXaxis().SetTitle(args[1])
         hist.SetLineColor(ROOT.TColor.GetColor(colorscale(self.color, 0.8)))
         hist.SetFillColor(ROOT.TColor.GetColor(colorscale(self.color, 1)))
@@ -276,6 +283,6 @@ for suffix, weight in categories.items():
                 isData = False
 	    print "suffix is :", suffix
 	    #histo1D should return 3 histograms. 
-	    variable.Add(process.Histo1D(variable.args, variable.varexp,variable.jesUp, variable.jerUp, variable.jesDown, variable.jerDown,variable.sysUnc, suffix), process.title, isSignal=isSignal, isData=isData)
+	    variable.Add(process.Histo1D(variable.args, variable.varexp,variable.jesUp, variable.jesDown, variable.jerUp, variable.jerDown,variable.sysUnc, suffix), process.title, isSignal=isSignal, isData=isData)
             #variable.Add(process.Histo1D(variable.args, variable.varexp, suffix), process.title, isSignal=isSignal, isData=isData)
         variable.Draw(suffix, "hist")
